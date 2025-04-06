@@ -1,6 +1,6 @@
 provider "azurerm" {
   features {}
-  subscription_id = "c08931ec-17b7-432b-b383-79e2850655f0"
+  subscription_id = "c08931ec-17b7-432b-b383-79e2850655f0"  
 }
 
 # Grupo de Recursos
@@ -9,63 +9,99 @@ resource "azurerm_resource_group" "carambolo_rg" {
   location = "East US"
 }
 
-# Plano de Serviço para o Front-End (ajustado para F1 - Free)
-resource "azurerm_service_plan" "frontend_plan" {
-  name                = "frontend-plan"
+# Container Registry
+resource "azurerm_container_registry" "carambolo_acr" {
+  name                = "caramboloacr123"
   resource_group_name = azurerm_resource_group.carambolo_rg.name
   location            = azurerm_resource_group.carambolo_rg.location
-  os_type             = "Linux"
-  sku_name            = "F1"
+  sku                 = "Basic"
+  admin_enabled       = true
 }
 
-resource "azurerm_linux_web_app" "frontend_app" {
-  name                = "frontend-app-carambolo"
-  resource_group_name = azurerm_resource_group.carambolo_rg.name
-  location            = azurerm_resource_group.carambolo_rg.location
-  service_plan_id = azurerm_service_plan.frontend_plan.id
+# Container App Environment
+resource "azurerm_container_app_environment" "carambolo_env" {
+  name                 = "carambolo-env"
+  location             = azurerm_resource_group.carambolo_rg.location
+  resource_group_name  = azurerm_resource_group.carambolo_rg.name
+}
 
-  site_config {
-    application_stack {
-      node_version = "22-lts"
+# BACKEND APP
+resource "azurerm_container_app" "backend_app" {
+  name                         = "carambolo-backend"
+  container_app_environment_id = azurerm_container_app_environment.carambolo_env.id
+  resource_group_name          = azurerm_resource_group.carambolo_rg.name
+  revision_mode                = "Single"
+
+  template {
+    container {
+      name   = "backend"
+      image  = "${azurerm_container_registry.carambolo_acr.login_server}/backend:latest"
+      cpu    = 0.5
+      memory = "1.0Gi"
+
+      env {
+        name  = "JAVA_OPTS"
+        value = "-Xmx512m"
+      }
     }
-    always_on = false
-    use_32_bit_worker = true
+  }
+
+  ingress {
+    external_enabled = true
+    target_port      = 8080
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+  }
+
+  registry {
+    server   = azurerm_container_registry.carambolo_acr.login_server
+    identity = "system"
+  }
+
+  identity {
+    type = "SystemAssigned"
   }
 }
 
-# # Configuração do Deployment via GitHub
-# resource "azurerm_app_service_source_control" "frontend_deploy" {
-#   app_id   = azurerm_linux_web_app.frontend_app.id
-#   repo_url = "https://github.com/Teiko-org/frontend"
-#   branch   = "main"
-#   use_manual_integration = false
-# }
+# FRONTEND APP
+resource "azurerm_container_app" "frontend_app" {
+  name                         = "carambolo-frontend"
+  container_app_environment_id = azurerm_container_app_environment.carambolo_env.id
+  resource_group_name          = azurerm_resource_group.carambolo_rg.name
+  revision_mode                = "Single"
 
-# Plano de Serviço para o Back-End
-resource "azurerm_service_plan" "backend_plan" {
-  name                = "backend-plan"
-  resource_group_name = azurerm_resource_group.carambolo_rg.name
-  location            = azurerm_resource_group.carambolo_rg.location
-  os_type             = "Linux"
-  sku_name            = "F1"
-}
-
-# Aplicação Back-End
-resource "azurerm_linux_web_app" "backend_app" {
-  name                = "backend-app-carambolo"
-  location            = azurerm_resource_group.carambolo_rg.location
-  resource_group_name = azurerm_resource_group.carambolo_rg.name
-  service_plan_id     = azurerm_service_plan.backend_plan.id
-
-  site_config {
-    application_stack {
-    java_server = "TOMCAT"
-    java_version = "11"
-    java_server_version = "11"
+  template {
+    container {
+      name   = "frontend"
+      image  = "${azurerm_container_registry.carambolo_acr.login_server}/frontend:latest"
+      cpu    = 0.5
+      memory = "0.5Gi"
     }
-    always_on = false
+  }
+
+  ingress {
+    external_enabled = true
+    target_port      = 80
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+  }
+
+  registry {
+    server   = azurerm_container_registry.carambolo_acr.login_server
+    identity = "system"
+  }
+
+  identity {
+    type = "SystemAssigned"
   }
 }
+
 
 # resource "azurerm_app_service_source_control" "backend_deploy" {
 #   app_id   = azurerm_linux_web_app.backend_app.id
