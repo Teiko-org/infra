@@ -95,7 +95,7 @@ FROM amazoncorretto:21-alpine
 WORKDIR /app
 COPY ./backend/carambolos-api/target/*.jar /app/app.jar
 EXPOSE 8080
-CMD ["java", "-jar", "/app/app.jar"]
+CMD ["java", "-Xms512m", "-Xmx10g", "-Dspring.profiles.active=prod", "-jar", "/app/app.jar"]
 EOF
 else
   echo "✅ $DOCKERFILE_JAVA já existe"
