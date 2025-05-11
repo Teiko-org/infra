@@ -1,27 +1,29 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-echo "🛑 Parando containers existentes..."
-docker-compose down || echo "⚠️ Nenhum container para parar ou erro ao derrubar containers."
+echo "⚠️  Iniciando processo de reset completo do ambiente Teiko..."
 
-echo "🧹 Removendo imagens Docker antigas..."
-docker image prune -a -f
+PROJECT_DIR="$HOME/teiko"
 
-echo "🧼 Limpando diretório antigo do projeto..."
-sudo rm -rf /etc/teiko
+# Parar e remover containers, volumes e imagens Docker
+echo "🧹 Removendo containers, volumes e imagens Docker..."
+docker-compose -f "$PROJECT_DIR/docker-compose.yml" down --volumes --rmi all || echo "⚠️ docker-compose não executado ou já parado"
+docker system prune -a -f || echo "⚠️ docker system prune falhou"
 
-echo "📁 Criando diretório novo e entrando nele..."
-sudo mkdir -p /etc/teiko
-cd /etc/teiko
+# Remover arquivos e diretórios do projeto
+echo "🗑️  Removendo diretórios do projeto..."
+rm -rf "$PROJECT_DIR"
 
-echo "📥 Clonando repositórios novamente..."
-git clone https://github.com/Teiko-org/frontend.git || { echo "❌ Erro ao clonar frontend"; exit 1; }
-git clone https://github.com/Teiko-org/backend.git || { echo "❌ Erro ao clonar backend"; exit 1; }
-git clone https://github.com/Teiko-org/infra.git || { echo "❌ Erro ao clonar infra"; exit 1; }
+# Remover swap temporário se existir
+if grep -q "/swapfile" /proc/swaps; then
+  echo "💾 Removendo swap temporária..."
+  sudo swapoff /swapfile
+  sudo rm -f /swapfile
+  echo "✅ Swap removida"
+else
+  echo "ℹ️ Nenhuma swap temporária ativa encontrada"
+fi
 
-echo "🔐 Dando permissão e executando o script principal de setup..."
-chmod +x ./infra/VM-Teiko/setup.sh
-./infra/VM-Teiko/setup.sh
-
-echo "✅ Infraestrutura reiniciada com sucesso!"
+echo "✅ Reset completo!"
+echo "🧼 Ambiente limpo e pronto para novo setup"
