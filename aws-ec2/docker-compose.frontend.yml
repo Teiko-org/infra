@@ -1,0 +1,20 @@
+version: '3.9'
+
+name: teiko-frontend
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-frontend
+    image: teiko/frontend:latest
+    container_name: teiko-frontend
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080/}
+    ports:
+      - "80:80"
+    env_file:
+      - .env.frontend
+
+
