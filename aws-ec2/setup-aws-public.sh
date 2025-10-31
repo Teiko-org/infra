@@ -24,9 +24,11 @@ cd /opt/teiko
 [[ -d frontend ]] || git clone https://github.com/Teiko-org/frontend.git frontend
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
 
-# .env do frontend
+# .env do frontend (somente API_UPSTREAMS)
 [[ -f infra/aws-ec2/.env.frontend ]] || cat > infra/aws-ec2/.env.frontend <<'ENVF'
-API_BASE_URL=http://localhost:8080/
+# Informe os backends (um ou mais):
+# Ex.: API_UPSTREAMS=10.0.2.203:8080,10.0.3.46:8080
+API_UPSTREAMS=
 ENVF
 
 echo "[public] Build e subida do frontend..."

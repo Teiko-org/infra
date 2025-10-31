@@ -19,7 +19,7 @@ services:
       retries: 10
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../../infra/VM-Teiko/bd/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
+      - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
     # Não expor portas em ambientes privados (comentar/remover se necessário)
     # ports:
     #   - "3306:3306"
@@ -54,7 +54,7 @@ services:
       mysql:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       # Database
       DB_USERNAME: ${DB_USERNAME:-teiko}
