@@ -5,7 +5,7 @@ Guia para subir backend (privadas) e frontend (públicas) nas EC2 usando Docker 
 ## Visão geral
 - 2 públicas: Nginx + app Vite (frontend)
 - 2 privadas: Spring Boot + MySQL + RabbitMQ (backend)
-- Frontend chama `/api`; Nginx faz proxy para `API_BASE_URL`.
+- Frontend chama `/api`; Nginx faz proxy balanceado para `API_UPSTREAMS` (lista de backends).
 
 ## Pré-requisitos
 - SG das públicas: permitir HTTP 80 da Internet e saída para privadas:8080
@@ -41,8 +41,8 @@ Teste:
 curl -s http://localhost:8080/actuator/health
 ```
 
-## 2) Frontend nas públicas
-Execute na pública da mesma AZ e aponte `API_BASE_URL` para a privada correspondente.
+## 2) Frontend nas públicas (Nginx com balanceamento)
+Execute na pública da mesma AZ e defina `API_UPSTREAMS` com um ou mais backends (IP privado:porta).
 
 ### us-east-1a
 ```bash
@@ -52,7 +52,10 @@ sudo apt-get update -y && sudo apt-get install -y git
 git clone https://github.com/Teiko-org/infra.git
 cd infra/aws-ec2
 
-echo 'API_BASE_URL=http://10.0.2.203:8080/' | sudo tee .env.frontend
+cat > .env.frontend <<EOF
+API_UPSTREAMS=10.0.2.203:8080
+EOF
+
 sudo bash setup-aws-public.sh
 ```
 
@@ -64,8 +67,18 @@ sudo apt-get update -y && sudo apt-get install -y git
 git clone https://github.com/Teiko-org/infra.git
 cd infra/aws-ec2
 
-echo 'API_BASE_URL=http://10.0.3.46:8080/' | sudo tee .env.frontend
+cat > .env.frontend <<EOF
+API_UPSTREAMS=10.0.3.46:8080
+EOF
+
 sudo bash setup-aws-public.sh
+```
+
+Para balancear as duas privadas em cada pública, use:
+```bash
+cat > .env.frontend <<EOF
+API_UPSTREAMS=10.0.2.203:8080,10.0.3.46:8080
+EOF
 ```
 
 Teste no navegador:
@@ -73,7 +86,7 @@ Teste no navegador:
 
 ## 3) Comandos úteis
 ```bash
-# Logs
+# Logs do backend
 docker logs -f teiko-backend
 
 # Serviços (backend)
@@ -86,14 +99,13 @@ sudo docker compose -f /opt/teiko/infra/aws-ec2/docker-compose.backend.yml up -d
 ```
 
 ## 4) Notas
-- Produção: frontend usa `/api`; Nginx envia para `API_BASE_URL`.
+- Produção: frontend usa `/api`; Nginx envia para `API_UPSTREAMS` (obrigatório).
 - Em privadas, MySQL e RabbitMQ não expostos.
-- Para balancear entre duas privadas a partir de uma pública, adaptar Nginx para `upstream`.
+- Alternativa: usar ALB interno da AWS e apontar Nginx para esse DNS na variável `API_UPSTREAMS` (um único destino).
 
 ## 5) Troubleshooting
 - 502 em `/api`:
-  - Verificar `API_BASE_URL` em `.env.frontend`.
-  - Dentro do container: `docker exec teiko-frontend sh -c 'apk add --no-cache curl; curl -sI $API_BASE_URL/actuator/health'`.
+  - Verificar `API_UPSTREAMS` em `.env.frontend` e conectividade 8080 SG público -> privado.
 - Backend falha por DB:
   - Checar saúde do `mysql` e credenciais do `.env.backend`.
 - Permissões Docker:

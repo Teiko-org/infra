@@ -11,7 +11,8 @@ services:
     container_name: teiko-frontend
     restart: unless-stopped
     environment:
-      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080/}
+      # Obrigatório: "10.0.2.203:8080,10.0.3.46:8080" (um ou mais destinos)
+      API_UPSTREAMS: ${API_UPSTREAMS:-}
     ports:
       - "80:80"
     env_file:
