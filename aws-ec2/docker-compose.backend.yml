@@ -1,0 +1,123 @@
+version: '3.9'
+
+name: teiko-backend
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: teiko-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
+      MYSQL_USER: ${DB_USERNAME:-teiko}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-teiko123}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
+    # Não expor portas em ambientes privados (comentar/remover se necessário)
+    # ports:
+    #   - "3306:3306"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: teiko-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    # Não expor portas em ambientes privados (comentar/remover se necessário)
+    # ports:
+    #   - "5672:5672"   # AMQP
+    #   - "15672:15672" # Console
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-backend
+    image: teiko/backend:latest
+    container_name: teiko-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      # Database
+      DB_USERNAME: ${DB_USERNAME:-teiko}
+      DB_PASSWORD: ${DB_PASSWORD:-teiko123}
+      DB_URL: ${DB_URL:-jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-teiko}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo}
+      # JWT
+      JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
+      # Azure Storage (opcional)
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-}
+      # RabbitMQ
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
+      RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
+      RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
+      # Java options (opcional)
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.backend
+
+  worker:
+    image: teiko/backend:latest
+    container_name: teiko-worker
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    environment:
+      # Perfis Spring
+      SPRING_PROFILES_ACTIVE: worker
+      # Database
+      DB_USERNAME: ${DB_USERNAME:-teiko}
+      DB_PASSWORD: ${DB_PASSWORD:-teiko123}
+      DB_URL: ${DB_URL:-jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-teiko}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo}
+      # JWT (pode não ser necessário no worker, mas mantemos consistente)
+      JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
+      # RabbitMQ
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
+      RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
+      RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
+      # Java options (opcional)
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    env_file:
+      - .env.backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  rabbitmq_data:

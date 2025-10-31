@@ -1,0 +1,26 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Copia o frontend Vite
+COPY ./frontend/carambolo-doces /app
+
+RUN npm ci || npm install
+RUN npm run build
+
+FROM nginx:alpine
+WORKDIR /
+RUN apk add --no-cache gettext
+
+# Copia artefatos e template do Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY infra/aws-ec2/nginx/nginx.upstream.conf.tmpl /etc/nginx/templates/upstream.conf.template
+RUN cp /etc/nginx/templates/upstream.conf.template /etc/nginx/templates/default.conf.template
+COPY infra/aws-ec2/dockerfiles/entrypoint-envsubst.sh /docker-entrypoint.d/50-envsubst-on-templates.sh
+RUN chmod +x /docker-entrypoint.d/50-envsubst-on-templates.sh
+
+ENV API_BASE_URL="http://localhost:8080/"
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+
