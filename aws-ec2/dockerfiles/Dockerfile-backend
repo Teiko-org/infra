@@ -6,7 +6,7 @@ WORKDIR /workspace
 COPY ./backend/carambolos-api /workspace/app
 WORKDIR /workspace/app
 
-RUN mvn -B -DskipTests clean package
+RUN mvn -B -DskipTests -Dmaven.test.skip=true clean package
 
 FROM amazoncorretto:21-alpine
 WORKDIR /app
