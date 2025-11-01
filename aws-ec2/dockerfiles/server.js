@@ -39,8 +39,8 @@ app.use('/api', createProxyMiddleware({
   },
 }));
 
-// SPA fallback
-app.get('*', (_req, res) => {
+// SPA fallback (Express 5 / path-to-regexp: use '/*' instead of '*')
+app.get('/*', (_req, res) => {
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
