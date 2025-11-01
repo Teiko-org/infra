@@ -22,8 +22,31 @@ sudo chown -R "$USER":"$USER" /opt/teiko
 cd /opt/teiko
 
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
+
+# Função para clonar repositório privado com token (opcional)
+clone_repo() {
+  local url_noauth="$1" target_dir="$2"
+  if [[ -n "${GIT_TOKEN:-${GITHUB_TOKEN:-}}" && -n "${GIT_USER:-}" ]]; then
+    local token="${GIT_TOKEN:-${GITHUB_TOKEN}}"
+    local url_auth="https://${GIT_USER}:${token}@${url_noauth#https://}"
+    git clone --depth 1 "$url_auth" "$target_dir"
+  else
+    git clone --depth 1 "$url_noauth" "$target_dir"
+  fi
+}
+
 mkdir -p backend
-[[ -d backend/carambolos-api ]] || git clone https://github.com/Teiko-org/carambolos-api.git backend/carambolos-api
+if [[ ! -d backend/.git ]]; then
+  git clone --depth 1 https://github.com/Teiko-org/backend.git backend || true
+fi
+
+if [[ ! -d backend/carambolos-api ]]; then
+  clone_repo "https://github.com/Teiko-org/carambolos-api.git" "backend/carambolos-api" || {
+    echo "[private] Aviso: não foi possível obter 'carambolos-api'. Se o repo for privado, exporte GIT_USER e GIT_TOKEN e rode novamente:" >&2
+    echo "         GIT_USER=seu_usuario GIT_TOKEN=seu_token sudo -E bash setup-aws-private.sh" >&2
+    exit 1
+  }
+fi
 
 # .env do backend (preenchido com defaults seguros)
 [[ -f infra/aws-ec2/.env.backend ]] || cat > infra/aws-ec2/.env.backend <<'ENVB'
