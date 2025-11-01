@@ -5,6 +5,12 @@ services:
     image: mysql:8.0
     container_name: teiko-mysql
     restart: unless-stopped
+    # Tornar o MySQL mais leve para instâncias menores
+    command:
+      - "--innodb-buffer-pool-size=256M"
+      - "--max_connections=150"
+      - "--performance_schema=OFF"
+      - "--innodb-log-file-size=128M"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
@@ -29,6 +35,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      # Limite de memória do Erlang VM (40% da RAM)
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: "0.4"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -72,8 +80,8 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
-      # Java options (opcional)
-      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      # Java options (opcional) - mais conservador para VMs pequenas
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     ports:
       - "8080:8080"
     env_file:
@@ -113,8 +121,8 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
-      # Java options (opcional)
-      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      # Java options (opcional) - mais conservador para VMs pequenas
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     env_file:
       - .env.backend
     healthcheck:
