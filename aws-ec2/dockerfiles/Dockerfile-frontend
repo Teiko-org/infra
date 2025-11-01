@@ -4,7 +4,15 @@ WORKDIR /app
 # Copia o frontend Vite
 COPY ./frontend/carambolo-doces /app
 
-RUN npm ci || npm install
+# Instala dependências build essenciais para binários nativos
+RUN apk add --no-cache python3 make g++
+
+# Remove package-lock.json e node_modules para forçar reinstalação limpa
+RUN rm -f package-lock.json && rm -rf node_modules
+
+# Instala dependências (força instalação de opcionais do rollup)
+RUN npm install --include=optional
+
 RUN npm run build
 
 # Evita rate limit/bloqueio do Docker Hub usando mirror público (ECR Public)
