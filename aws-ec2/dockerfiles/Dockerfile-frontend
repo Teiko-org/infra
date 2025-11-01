@@ -1,19 +1,28 @@
-FROM node:21-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
+
+# Evita downloads/avisos desnecessários no build
+ENV BROWSERSLIST_IGNORE_OLD_DATA=true \
+    npm_config_audit=false \
+    npm_config_fund=false \
+    npm_config_loglevel=warn
 
 # Instala primeiro somente manifestos para cache eficaz
 COPY ./frontend/carambolo-doces/package*.json ./
 
 # Instala dependências (inclui opcionais para rollup) com cache
-RUN npm ci --include=optional || npm install --include=optional
+RUN npm ci --include=optional --no-audit --no-fund || npm install --include=optional --no-audit --no-fund
+# Garante binário musl do Rollup no Alpine
+RUN npm i -D @rollup/rollup-linux-x64-musl --no-save || true
 
 # Copia o código depois para aproveitar cache de deps
 COPY ./frontend/carambolo-doces ./
 
-RUN npm run build
+# Build mais rápido (sem minificação nem sourcemap)
+RUN npm run build -- --minify=false --sourcemap=false
 
 # Runtime leve (Node para servir via Express)
-FROM node:21-alpine
+FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm init -y && npm i express http-proxy-middleware
