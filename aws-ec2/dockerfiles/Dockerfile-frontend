@@ -8,20 +8,19 @@ RUN npm ci || npm install
 RUN npm run build
 
 # Evita rate limit/bloqueio do Docker Hub usando mirror público (ECR Public)
-FROM public.ecr.aws/docker/library/nginx:alpine
+FROM ghcr.io/nginxinc/nginx-unprivileged:stable-alpine
 WORKDIR /
-RUN apk add --no-cache gettext
 
 # Copia artefatos e template do Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY infra/aws-ec2/nginx/nginx.upstream.conf.tmpl /etc/nginx/templates/upstream.conf.template
 RUN cp /etc/nginx/templates/upstream.conf.template /etc/nginx/templates/default.conf.template
-COPY infra/aws-ec2/dockerfiles/entrypoint-envsubst.sh /docker-entrypoint.d/50-envsubst-on-templates.sh
-RUN chmod +x /docker-entrypoint.d/50-envsubst-on-templates.sh
+COPY infra/aws-ec2/dockerfiles/entrypoint-envsubst.sh /docker-entrypoint.d/50-render-upstream.sh
+RUN chmod +x /docker-entrypoint.d/50-render-upstream.sh
 
 ENV API_BASE_URL="http://localhost:8080/"
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
 
 
