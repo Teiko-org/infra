@@ -24,12 +24,18 @@ cd /opt/teiko
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
 
 # Estrutura esperada pelo Dockerfile-frontend: ./frontend/carambolo-doces
-mkdir -p frontend
-if [[ ! -d frontend/carambolo-doces/.git ]]; then
-  git clone --depth 1 https://github.com/Teiko-org/carambolo-doces.git frontend/carambolo-doces || {
-    echo "[public] Falha ao clonar Teiko-org/carambolo-doces" >&2
+if [[ ! -d frontend/.git ]]; then
+  echo "[public] Clonando frontend..."
+  git clone https://github.com/Teiko-org/frontend.git frontend || {
+    echo "[public] Falha ao clonar frontend. Se for privado, configure SSH keys na EC2." >&2
     exit 1
   }
+fi
+
+# Verifica se carambolo-doces existe dentro do monorepo frontend
+if [[ ! -d frontend/carambolo-doces ]]; then
+  echo "[public] ERRO: frontend/carambolo-doces não encontrado no repositório clonado." >&2
+  exit 1
 fi
 
 # .env do frontend (somente API_UPSTREAMS)
