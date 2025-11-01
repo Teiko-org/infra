@@ -32,6 +32,9 @@ app.use('/api', createProxyMiddleware({
   changeOrigin: true,
   // target é obrigatório; usa o primeiro apenas como placeholder, o router escolhe de fato
   target: `http://${upstreams[0]}`,
+  pathRewrite: {
+    '^/api': '',
+  },
   router: () => pickTarget(),
   onProxyReq: (proxyReq) => {
     // garante conexão keep-alive/upgrade quando necessário
