@@ -1,4 +1,4 @@
-FROM node:21-bookworm AS build
+FROM node:21-alpine AS build
 WORKDIR /app
 
 # Instala primeiro somente manifestos para cache eficaz
@@ -13,7 +13,7 @@ COPY ./frontend/carambolo-doces ./
 RUN npm run build
 
 # Runtime leve (Node para servir via Express)
-FROM node:21-bookworm-slim
+FROM node:21-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm init -y && npm i express http-proxy-middleware
