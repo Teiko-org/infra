@@ -1,22 +1,19 @@
-FROM node:20-alpine AS build
+FROM node:21-bookworm AS build
 WORKDIR /app
 
-# Copia o frontend Vite
-COPY ./frontend/carambolo-doces /app
+# Instala primeiro somente manifestos para cache eficaz
+COPY ./frontend/carambolo-doces/package*.json ./
 
-# Instala dependências build essenciais para binários nativos
-RUN apk add --no-cache python3 make g++
+# Instala dependências (inclui opcionais para rollup) com cache
+RUN npm ci --include=optional || npm install --include=optional
 
-# Remove package-lock.json e node_modules para forçar reinstalação limpa
-RUN rm -f package-lock.json && rm -rf node_modules
-
-# Instala dependências (força instalação de opcionais do rollup)
-RUN npm install --include=optional
+# Copia o código depois para aproveitar cache de deps
+COPY ./frontend/carambolo-doces ./
 
 RUN npm run build
 
-# Evita rate limit/bloqueio do Docker Hub usando mirror público (ECR Public)
-FROM node:20-alpine
+# Runtime leve (Node para servir via Express)
+FROM node:21-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm init -y && npm i express http-proxy-middleware
