@@ -21,8 +21,9 @@ sudo mkdir -p /opt/teiko
 sudo chown -R "$USER":"$USER" /opt/teiko
 cd /opt/teiko
 
-[[ -d backend ]] || git clone https://github.com/Teiko-org/backend.git backend
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
+mkdir -p backend
+[[ -d backend/carambolos-api ]] || git clone https://github.com/Teiko-org/carambolos-api.git backend/carambolos-api
 
 # .env do backend (preenchido com defaults seguros)
 [[ -f infra/aws-ec2/.env.backend ]] || cat > infra/aws-ec2/.env.backend <<'ENVB'
@@ -35,8 +36,8 @@ DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKe
 JWT_VALIDITY=3600000
 JWT_SECRET=CHANGE_ME_32_CHARS_MIN
 
-RABBITMQ_USERNAME=guest
-RABBITMQ_PASSWORD=guest
+RABBITMQ_USERNAME=teiko
+RABBITMQ_PASSWORD=teiko123
 RABBITMQ_CONCURRENCY=2
 RABBITMQ_MAX_CONCURRENCY=4
 RABBITMQ_PREFETCH=10
@@ -45,9 +46,35 @@ AZURE_STORAGE_CONNECTION_STRING=
 AZURE_STORAGE_CONTAINER_NAME=
 ENVB
 
-echo "[private] Build e subida do backend..."
+echo "[private] Build e subida do backend (subindo em etapas)..."
 docker compose -f infra/aws-ec2/docker-compose.backend.yml build
-docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d
+
+# Sobe apenas MySQL e RabbitMQ primeiro
+docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d mysql rabbitmq
+
+# Aguarda healthchecks
+echo "[private] Aguardando MySQL e RabbitMQ ficarem healthy..."
+for i in {1..60}; do
+  MYSQL_H=$(docker inspect -f '{{.State.Health.Status}}' teiko-mysql 2>/dev/null || echo starting)
+  RABBIT_H=$(docker inspect -f '{{.State.Health.Status}}' teiko-rabbitmq 2>/dev/null || echo starting)
+  if [[ "$MYSQL_H" == "healthy" && "$RABBIT_H" == "healthy" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+# Sobe API e aguarda ficar UP
+docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d api
+echo "[private] Aguardando API responder health..."
+for i in {1..60}; do
+  if docker exec teiko-backend wget -qO- http://localhost:8080/actuator/health | grep -q 'UP'; then
+    break
+  fi
+  sleep 2
+done
+
+# Sobe o worker por último
+docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d worker
 
 echo "[private] Concluído. Reinicie a sessão para aplicar grupo docker se necessário."
 
