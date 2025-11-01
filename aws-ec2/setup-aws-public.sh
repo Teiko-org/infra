@@ -21,8 +21,16 @@ sudo mkdir -p /opt/teiko
 sudo chown -R "$USER":"$USER" /opt/teiko
 cd /opt/teiko
 
-[[ -d frontend ]] || git clone https://github.com/Teiko-org/frontend.git frontend
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
+
+# Estrutura esperada pelo Dockerfile-frontend: ./frontend/carambolo-doces
+mkdir -p frontend
+if [[ ! -d frontend/carambolo-doces/.git ]]; then
+  git clone --depth 1 https://github.com/Teiko-org/carambolo-doces.git frontend/carambolo-doces || {
+    echo "[public] Falha ao clonar Teiko-org/carambolo-doces" >&2
+    exit 1
+  }
+fi
 
 # .env do frontend (somente API_UPSTREAMS)
 [[ -f infra/aws-ec2/.env.frontend ]] || cat > infra/aws-ec2/.env.frontend <<'ENVF'
