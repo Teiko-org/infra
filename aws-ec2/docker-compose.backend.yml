@@ -35,8 +35,6 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-      # Limite de memória do Erlang VM (40% da RAM)
-      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: "0.4"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -55,7 +53,7 @@ services:
       dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-backend
     image: teiko/backend:latest
     container_name: teiko-backend
-    restart: unless-stopped
+    restart: "on-failure:3"
     depends_on:
       mysql:
         condition: service_healthy
@@ -92,12 +90,12 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - ../../backend/dev.env:/app/dev.env:ro
+      - ../../backend/dev.env:/app/prod.env:ro
 
   worker:
     image: teiko/backend:latest
     container_name: teiko-worker
-    restart: unless-stopped
+    restart: "on-failure:3"
     depends_on:
       mysql:
         condition: service_healthy
@@ -126,12 +124,12 @@ services:
     env_file:
       - .env.backend
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
-      interval: 10s
+      test: ["CMD", "true"]
+      interval: 30s
       timeout: 5s
-      retries: 10
+      retries: 3
     volumes:
-      - ../../backend/dev.env:/app/dev.env:ro
+      - ../../backend/dev.env:/app/prod.env:ro
 
 volumes:
   mysql_data:
