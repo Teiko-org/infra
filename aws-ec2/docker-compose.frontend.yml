@@ -12,7 +12,7 @@ services:
       # Obrigatório: "10.0.2.203:8080,10.0.3.46:8080" (um ou mais destinos)
       API_UPSTREAMS: ${API_UPSTREAMS:-}
     ports:
-      - "80:80"
+      - "80:8080"
     env_file:
       - .env.frontend
     healthcheck:
