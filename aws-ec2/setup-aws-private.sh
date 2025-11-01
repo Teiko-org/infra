@@ -48,6 +48,28 @@ if [[ ! -d backend/carambolos-api ]]; then
   }
 fi
 
+# Garante o arquivo de env consumido pela API/worker (montado como /app/prod.env)
+DEVENV="/opt/teiko/backend/dev.env"
+if [[ ! -f "$DEVENV" ]]; then
+  cat > "$DEVENV" <<'ENVDEV'
+DB_USERNAME=teiko
+DB_PASSWORD=teiko123
+DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
+JWT_SECRET=CHANGE_ME_32_CHARS_MIN
+ENVDEV
+fi
+
+# Corrige host do JDBC se vier como localhost
+if grep -q '^DB_URL=' "$DEVENV"; then
+  sed -i 's|^DB_URL=.*|DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo|' "$DEVENV"
+fi
+
+# Gera CRYPTO_SECRET_B64 se ausente
+if ! grep -q '^CRYPTO_SECRET_B64=' "$DEVENV"; then
+  KEY=$(openssl rand -base64 32)
+  echo "CRYPTO_SECRET_B64=$KEY" >> "$DEVENV"
+fi
+
 # .env do backend (preenchido com defaults seguros)
 [[ -f infra/aws-ec2/.env.backend ]] || cat > infra/aws-ec2/.env.backend <<'ENVB'
 MYSQL_ROOT_PASSWORD=root123
