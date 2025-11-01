@@ -84,6 +84,7 @@ services:
       - "8080:8080"
     env_file:
       - .env.backend
+      - ../../backend/dev.env
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
       interval: 10s
@@ -123,6 +124,7 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     env_file:
       - .env.backend
+      - ../../backend/dev.env
     healthcheck:
       test: ["CMD", "true"]
       interval: 30s
