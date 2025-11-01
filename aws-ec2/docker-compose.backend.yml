@@ -67,9 +67,7 @@ services:
       # JWT
       JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
-      # Azure Storage (opcional)
-      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
-      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-}
+      # Azure Storage (valores virão via env_file)
       # RabbitMQ
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
