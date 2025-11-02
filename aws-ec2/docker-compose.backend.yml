@@ -16,6 +16,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
       MYSQL_USER: ${DB_USERNAME:-teiko}
       MYSQL_PASSWORD: ${DB_PASSWORD:-teiko123}
+      LANG: C.UTF-8
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
       interval: 10s
@@ -24,6 +25,10 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
+    command: [
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci"
+    ]
     # Não expor portas em ambientes privados (comentar/remover se necessário)
     # ports:
     #   - "3306:3306"
