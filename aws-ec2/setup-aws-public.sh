@@ -38,6 +38,19 @@ if [[ ! -d frontend/carambolo-doces ]]; then
   exit 1
 fi
 
+# Garante que o build do Vite use o proxy /api
+echo "[public] Configurando VITE_API_BASE_URL=/api para o build do frontend..."
+cat > frontend/carambolo-doces/.env.production <<'ENV'
+VITE_API_BASE_URL=/api
+ENV
+
+# Força o Axios a usar /api (ou VITE_API_BASE_URL) se o arquivo existir
+if [[ -f frontend/carambolo-doces/src/provider/AxiosApi.js ]]; then
+  sed -i 's|http://localhost:8080|/api|g' frontend/carambolo-doces/src/provider/AxiosApi.js || true
+  sed -i '0,/^const baseURL/s|^const baseURL.*|const baseURL = import.meta?.env?.VITE_API_BASE_URL || "/api";|' \
+    frontend/carambolo-doces/src/provider/AxiosApi.js || true
+fi
+
 # .env do frontend (somente API_UPSTREAMS)
 if [[ ! -f infra/aws-ec2/.env.frontend ]]; then
   cat > infra/aws-ec2/.env.frontend <<'ENVF'
