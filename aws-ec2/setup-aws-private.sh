@@ -22,6 +22,11 @@ sudo chown -R "$USER":"$USER" /opt/teiko
 cd /opt/teiko
 
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
+if [[ "${FORCE_INFRA_UPDATE:-0}" = "1" ]]; then
+  echo "[private] Atualizando repo infra (reset --hard + pull) ..."
+  git -C infra reset --hard HEAD || true
+  git -C infra pull || true
+fi
 
 # Função para clonar repositório privado com token (opcional)
 clone_repo() {
@@ -48,8 +53,8 @@ if [[ ! -d backend/carambolos-api ]]; then
   }
 fi
 
-# Gerar segredo forte
-JWT_SECRET_HEX=$(openssl rand -hex 48)
+# Definir segredo JWT (aceita override via SHARED_JWT/JWT_SECRET)
+JWT_SECRET_HEX=${SHARED_JWT:-${JWT_SECRET:-$(openssl rand -hex 48)}}
 
 # Garante o arquivo de env consumido pela API/worker (Dotenv lê dev.env)
 DEVENV="/opt/teiko/backend/dev.env"
@@ -61,8 +66,8 @@ DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKe
 JWT_VALIDITY=3600000
 JWT_SECRET=$JWT_SECRET_HEX
 
-AZURE_STORAGE_CONNECTION_STRING=
-AZURE_STORAGE_CONTAINER_NAME=
+AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-}
 
 # extra (não usado diretamente agora, mas útil)
 CRYPTO_SECRET_B64=$(openssl rand -base64 32)
@@ -85,8 +90,8 @@ RABBITMQ_CONCURRENCY=2
 RABBITMQ_MAX_CONCURRENCY=4
 RABBITMQ_PREFETCH=10
 
-AZURE_STORAGE_CONNECTION_STRING=
-AZURE_STORAGE_CONTAINER_NAME=
+AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-}
 ENVB
 
 # Ajustes no docker-compose: remover sobrescritas de JWT e garantir mapeamento para /app/prod.env
@@ -124,5 +129,11 @@ done
 docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d worker
 
 echo "[private] Concluído. Reinicie a sessão para aplicar grupo docker se necessário."
+
+# Infos úteis pós-instalação
+echo "[private] Verificações:" && \
+  echo " - NAT/egresso: $(curl -sS https://api.ipify.org || echo fail)" && \
+  echo " - JWT_LEN: $(awk -F= '/^JWT_SECRET=/{print length($2)}' /opt/teiko/backend/dev.env 2>/dev/null || echo 0)" && \
+  echo " - HEALTH: $(curl -sS -m 5 http://localhost:8080/actuator/health 2>/dev/null || echo fail)"
 
 
