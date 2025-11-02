@@ -22,6 +22,11 @@ sudo chown -R "$USER":"$USER" /opt/teiko
 cd /opt/teiko
 
 [[ -d infra ]] || git clone https://github.com/Teiko-org/infra.git infra
+if [[ "${FORCE_INFRA_UPDATE:-0}" = "1" ]]; then
+  echo "[public] Atualizando repo infra (reset --hard + pull) ..."
+  git -C infra reset --hard HEAD || true
+  git -C infra pull || true
+fi
 
 # Estrutura esperada pelo Dockerfile-frontend: ./frontend/carambolo-doces
 if [[ ! -d frontend/.git ]]; then
@@ -30,6 +35,11 @@ if [[ ! -d frontend/.git ]]; then
     echo "[public] Falha ao clonar frontend. Se for privado, configure SSH keys na EC2." >&2
     exit 1
   }
+fi
+if [[ "${FORCE_FRONT_UPDATE:-0}" = "1" && -d frontend/.git ]]; then
+  echo "[public] Atualizando repo frontend (reset --hard + pull) ..."
+  git -C frontend reset --hard HEAD || true
+  git -C frontend pull || true
 fi
 
 # Verifica se carambolo-doces existe dentro do monorepo frontend
@@ -63,6 +73,11 @@ if [[ -d frontend/carambolo-doces/src/assets ]]; then
   sed -i 's|/src/assets/user_icon.png|/user_icon.png|g' \
     frontend/carambolo-doces/src/components/InputImage/ProfileImageUpload.jsx \
     frontend/carambolo-doces/src/components/InputImage/ProfileImageDisplay.jsx || true
+fi
+
+# Opcional: aumentar limite de listeners do Node para evitar warning (cosmético)
+if ! grep -q 'events.defaultMaxListeners' infra/aws-ec2/dockerfiles/server.js 2>/dev/null; then
+  sed -i '1i const events = require("events"); events.defaultMaxListeners = 50;' infra/aws-ec2/dockerfiles/server.js || true
 fi
 
 # .env do frontend (somente API_UPSTREAMS)
