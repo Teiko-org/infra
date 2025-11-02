@@ -48,30 +48,28 @@ if [[ ! -d backend/carambolos-api ]]; then
   }
 fi
 
-# Garante o arquivo de env consumido pela API/worker (montado como /app/prod.env)
+# Gerar segredo forte
+JWT_SECRET_HEX=$(openssl rand -hex 48)
+
+# Garante o arquivo de env consumido pela API/worker (Dotenv lê dev.env)
 DEVENV="/opt/teiko/backend/dev.env"
-if [[ ! -f "$DEVENV" ]]; then
-  cat > "$DEVENV" <<'ENVDEV'
+cat > "$DEVENV" <<ENVDEV
 DB_USERNAME=teiko
 DB_PASSWORD=teiko123
 DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
-JWT_SECRET=CHANGE_ME_32_CHARS_MIN
+
+JWT_VALIDITY=3600000
+JWT_SECRET=$JWT_SECRET_HEX
+
+AZURE_STORAGE_CONNECTION_STRING=
+AZURE_STORAGE_CONTAINER_NAME=
+
+# extra (não usado diretamente agora, mas útil)
+CRYPTO_SECRET_B64=$(openssl rand -base64 32)
 ENVDEV
-fi
 
-# Corrige host do JDBC se vier como localhost
-if grep -q '^DB_URL=' "$DEVENV"; then
-  sed -i 's|^DB_URL=.*|DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo|' "$DEVENV"
-fi
-
-# Gera CRYPTO_SECRET_B64 se ausente
-if ! grep -q '^CRYPTO_SECRET_B64=' "$DEVENV"; then
-  KEY=$(openssl rand -base64 32)
-  echo "CRYPTO_SECRET_B64=$KEY" >> "$DEVENV"
-fi
-
-# .env do backend (preenchido com defaults seguros)
-[[ -f infra/aws-ec2/.env.backend ]] || cat > infra/aws-ec2/.env.backend <<'ENVB'
+# .env do backend para docker compose (valores coerentes)
+cat > infra/aws-ec2/.env.backend <<ENVB
 MYSQL_ROOT_PASSWORD=root123
 MYSQL_DATABASE=teiko
 DB_USERNAME=teiko
@@ -79,7 +77,7 @@ DB_PASSWORD=teiko123
 DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
 
 JWT_VALIDITY=3600000
-JWT_SECRET=CHANGE_ME_32_CHARS_MIN
+JWT_SECRET=$JWT_SECRET_HEX
 
 RABBITMQ_USERNAME=teiko
 RABBITMQ_PASSWORD=teiko123
@@ -90,6 +88,10 @@ RABBITMQ_PREFETCH=10
 AZURE_STORAGE_CONNECTION_STRING=
 AZURE_STORAGE_CONTAINER_NAME=
 ENVB
+
+# Ajustes no docker-compose: remover sobrescritas de JWT e montar dev.env no caminho certo
+sed -i '/JWT_SECRET:/d;/JWT_VALIDITY:/d' infra/aws-ec2/docker-compose.backend.yml
+sed -i 's#/app/prod.env#/app/dev.env#g' infra/aws-ec2/docker-compose.backend.yml
 
 echo "[private] Build e subida do backend (subindo em etapas)..."
 docker compose -f infra/aws-ec2/docker-compose.backend.yml build
