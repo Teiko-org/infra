@@ -89,9 +89,9 @@ AZURE_STORAGE_CONNECTION_STRING=
 AZURE_STORAGE_CONTAINER_NAME=
 ENVB
 
-# Ajustes no docker-compose: remover sobrescritas de JWT e montar dev.env no caminho certo
+# Ajustes no docker-compose: remover sobrescritas de JWT e garantir mapeamento para /app/prod.env
 sed -i '/JWT_SECRET:/d;/JWT_VALIDITY:/d' infra/aws-ec2/docker-compose.backend.yml
-sed -i 's#/app/prod.env#/app/dev.env#g' infra/aws-ec2/docker-compose.backend.yml
+sed -i 's#/app/dev.env#/app/prod.env#g' infra/aws-ec2/docker-compose.backend.yml
 
 echo "[private] Build e subida do backend (subindo em etapas)..."
 docker compose -f infra/aws-ec2/docker-compose.backend.yml build
