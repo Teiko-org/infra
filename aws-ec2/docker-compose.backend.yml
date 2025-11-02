@@ -1,5 +1,3 @@
-version: '3.9'
-
 name: teiko-backend
 
 services:
@@ -7,6 +5,12 @@ services:
     image: mysql:8.0
     container_name: teiko-mysql
     restart: unless-stopped
+    # Tornar o MySQL mais leve para instâncias menores
+    command:
+      - "--innodb-buffer-pool-size=256M"
+      - "--max_connections=150"
+      - "--performance_schema=OFF"
+      - "--innodb-log-file-size=128M"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
@@ -35,7 +39,7 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     # Não expor portas em ambientes privados (comentar/remover se necessário)
@@ -49,7 +53,7 @@ services:
       dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-backend
     image: teiko/backend:latest
     container_name: teiko-backend
-    restart: unless-stopped
+    restart: "on-failure:3"
     depends_on:
       mysql:
         condition: service_healthy
@@ -63,9 +67,7 @@ services:
       # JWT
       JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
-      # Azure Storage (opcional)
-      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
-      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-}
+      # Azure Storage (valores virão via env_file)
       # RabbitMQ
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
@@ -74,22 +76,30 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
-      # Java options (opcional)
-      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      # Java options (opcional) - mais conservador para VMs pequenas
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     ports:
       - "8080:8080"
     env_file:
       - .env.backend
+      - ../../backend/dev.env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ../../backend/dev.env:/app/prod.env:ro
 
   worker:
     image: teiko/backend:latest
     container_name: teiko-worker
-    restart: unless-stopped
+    restart: "on-failure:3"
     depends_on:
       mysql:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       # Perfis Spring
       SPRING_PROFILES_ACTIVE: worker
@@ -108,15 +118,18 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
-      # Java options (opcional)
-      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      # Java options (opcional) - mais conservador para VMs pequenas
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     env_file:
       - .env.backend
+      - ../../backend/dev.env
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
-      interval: 10s
+      test: ["CMD", "true"]
+      interval: 30s
       timeout: 5s
-      retries: 10
+      retries: 3
+    volumes:
+      - ../../backend/dev.env:/app/prod.env:ro
 
 volumes:
   mysql_data:

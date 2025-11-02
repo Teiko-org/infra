@@ -1,26 +1,34 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copia o frontend Vite
-COPY ./frontend/carambolo-doces /app
+# Evita downloads/avisos desnecessários no build
+ENV BROWSERSLIST_IGNORE_OLD_DATA=true \
+    npm_config_audit=false \
+    npm_config_fund=false \
+    npm_config_loglevel=warn
 
-RUN npm ci || npm install
-RUN npm run build
+# Instala primeiro somente manifestos para cache eficaz
+COPY ./frontend/carambolo-doces/package*.json ./
 
-FROM nginx:alpine
-WORKDIR /
-RUN apk add --no-cache gettext
+# Instala dependências (inclui opcionais para rollup) com cache
+RUN npm ci --include=optional --no-audit --no-fund || npm install --include=optional --no-audit --no-fund
+# Garante binário musl do Rollup no Alpine
+RUN npm i -D @rollup/rollup-linux-x64-musl --no-save || true
 
-# Copia artefatos e template do Nginx
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY infra/aws-ec2/nginx/nginx.upstream.conf.tmpl /etc/nginx/templates/upstream.conf.template
-RUN cp /etc/nginx/templates/upstream.conf.template /etc/nginx/templates/default.conf.template
-COPY infra/aws-ec2/dockerfiles/entrypoint-envsubst.sh /docker-entrypoint.d/50-envsubst-on-templates.sh
-RUN chmod +x /docker-entrypoint.d/50-envsubst-on-templates.sh
+# Copia o código depois para aproveitar cache de deps
+COPY ./frontend/carambolo-doces ./
 
-ENV API_BASE_URL="http://localhost:8080/"
+# Build mais rápido (sem minificação nem sourcemap)
+RUN npm run build -- --minify=false --sourcemap=false
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Runtime leve (Node para servir via Express)
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+RUN npm init -y && npm i express http-proxy-middleware
+COPY infra/aws-ec2/dockerfiles/server.js /app/server.js
+COPY --from=build /app/dist /app/dist
+EXPOSE 8080
+CMD ["node", "server.js"]
 
 

@@ -1,5 +1,3 @@
-version: '3.9'
-
 name: teiko-frontend
 
 services:
@@ -14,8 +12,13 @@ services:
       # Obrigatório: "10.0.2.203:8080,10.0.3.46:8080" (um ou mais destinos)
       API_UPSTREAMS: ${API_UPSTREAMS:-}
     ports:
-      - "80:80"
+      - "80:8080"
     env_file:
       - .env.frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 

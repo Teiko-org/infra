@@ -1,8 +1,6 @@
 #!/bin/sh
 set -e
 
-TEMPLATE_DIR="/etc/nginx/templates"
-
 # Exigir API_UPSTREAMS e gerar config com upstream (compatível POSIX sh)
 if [ -z "${API_UPSTREAMS:-}" ]; then
   echo "[nginx][erro] API_UPSTREAMS não definido. Ex.: API_UPSTREAMS=10.0.2.203:8080,10.0.3.46:8080"
@@ -18,11 +16,33 @@ for item in $list; do
   [ -z "$item_trim" ] && continue
   UPSTREAM_SERVERS="${UPSTREAM_SERVERS}$(printf '    server %s;\n' "$item_trim")"
 done
-export UPSTREAM_SERVERS
 
 target="/etc/nginx/conf.d/default.conf"
-echo "[envsubst] Renderizando upstream template -> $target"
-envsubst '$(UPSTREAM_SERVERS)' < "$TEMPLATE_DIR/upstream.conf.template" > "$target"
+echo "[render] Escrevendo Nginx config -> $target"
+cat > "$target" <<EOF
+upstream backend {
+${UPSTREAM_SERVERS}
+}
+
+server {
+    listen 8080;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files \$uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
 
 exit 0
 
