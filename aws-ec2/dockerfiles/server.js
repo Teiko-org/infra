@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 
 const app = express();
 const port = 8080;
@@ -27,7 +27,7 @@ const pickTarget = () => {
 const distDir = path.join(__dirname, 'dist');
 app.use(express.static(distDir));
 
-// Proxy /api para os backends, mantendo o prefixo /api
+// Proxy /api para os backends, com reescrita de URLs absolutas nas respostas
 app.use('/api', createProxyMiddleware({
   changeOrigin: true,
   // target é obrigatório; usa o primeiro apenas como placeholder, o router escolhe de fato
@@ -36,6 +36,18 @@ app.use('/api', createProxyMiddleware({
     '^/api': '',
   },
   router: () => pickTarget(),
+  selfHandleResponse: true,
+  onProxyRes: responseInterceptor(async (buffer, proxyRes) => {
+    const ct = String(proxyRes.headers['content-type'] || '').toLowerCase();
+    if (ct.includes('application/json') || ct.includes('text/')) {
+      let body = buffer.toString('utf8');
+      // Normaliza URLs absolutas do backend para passarem via proxy /api
+      body = body.replace(/http:\/\/localhost:8080\/?/gi, '/api/');
+      body = body.replace(/http:\/\/10\.\d+\.\d+\.\d+:8080\/?/gi, '/api/');
+      return body;
+    }
+    return buffer;
+  }),
   onProxyReq: (proxyReq) => {
     // garante conexão keep-alive/upgrade quando necessário
     proxyReq.setHeader('Connection', 'keep-alive');
