@@ -51,6 +51,20 @@ if [[ -f frontend/carambolo-doces/src/provider/AxiosApi.js ]]; then
     frontend/carambolo-doces/src/provider/AxiosApi.js || true
 fi
 
+# Ajusta assets estáticos: mover para public/ e corrigir referências literais
+if [[ -d frontend/carambolo-doces/src/assets ]]; then
+  echo "[public] Movendo assets para public/ e corrigindo referências..."
+  mkdir -p frontend/carambolo-doces/public
+  cp -a frontend/carambolo-doces/src/assets/* frontend/carambolo-doces/public/
+  # Corrige strings literais em JSX/JS/TSX que apontam para src/assets/
+  find frontend/carambolo-doces/src -type f \( -name "*.jsx" -o -name "*.js" -o -name "*.tsx" \) -print0 \
+    | xargs -0 sed -i 's|src/assets/|/|g'
+  # Correção específica de user_icon
+  sed -i 's|/src/assets/user_icon.png|/user_icon.png|g' \
+    frontend/carambolo-doces/src/components/InputImage/ProfileImageUpload.jsx \
+    frontend/carambolo-doces/src/components/InputImage/ProfileImageDisplay.jsx || true
+fi
+
 # .env do frontend (somente API_UPSTREAMS)
 if [[ ! -f infra/aws-ec2/.env.frontend ]]; then
   cat > infra/aws-ec2/.env.frontend <<'ENVF'
