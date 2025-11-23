@@ -1,0 +1,98 @@
+resource "aws_security_group" "public" {
+  name        = "${var.project_name}-public-sg"
+  description = "SG das instâncias públicas (frontend/proxy)"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.public_ssh_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-public-sg"
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_security_group" "private" {
+  name        = "${var.project_name}-private-sg"
+  description = "SG das instâncias privadas (backend)"
+  vpc_id      = aws_vpc.main.id
+
+  # Backend acessível apenas a partir das públicas (porta 8080).
+  ingress {
+    description     = "Backend HTTP da API a partir das públicas"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.public.id]
+  }
+
+  # MySQL e RabbitMQ apenas dentro da VPC.
+  ingress {
+    description = "MySQL interno"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  ingress {
+    description = "RabbitMQ AMQP interno"
+    from_port   = 5672
+    to_port     = 5672
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  ingress {
+    description = "RabbitMQ console interno"
+    from_port   = 15672
+    to_port     = 15672
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  # SSH opcionalmente apenas a partir do seu IP (usa o mesmo CIDR das públicas).
+  ingress {
+    description = "SSH administrativo"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.public_ssh_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-private-sg"
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+
