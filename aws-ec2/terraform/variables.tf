@@ -61,7 +61,7 @@ variable "root_volume_size_db" {
 variable "key_name" {
   description = "Nome do key pair já criado na conta AWS (ex: key-carambolos)."
   type        = string
-  default     = "key-teiko"
+  default     = "key-carambolos"
 }
 
 variable "public_ssh_cidr" {

@@ -40,7 +40,7 @@ resource "aws_security_group" "private" {
 
   # Backend acessível apenas a partir das públicas (porta 8080).
   ingress {
-    description     = "Backend HTTP from public instances"
+    description     = "Backend HTTP da API a partir das públicas"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
