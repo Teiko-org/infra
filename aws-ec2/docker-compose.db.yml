@@ -1,0 +1,39 @@
+name: teiko-db
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: teiko-mysql
+    restart: unless-stopped
+    # Tornar o MySQL mais leve para instâncias menores
+    command:
+      - "--innodb-buffer-pool-size=256M"
+      - "--max_connections=150"
+      - "--performance_schema=OFF"
+      - "--innodb-log-file-size=128M"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
+      MYSQL_USER: ${DB_USERNAME:-teiko}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-teiko123}
+      LANG: C.UTF-8
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
+    # Em produção, o MySQL fica acessível apenas via VPC/SG (não expor porta pública aqui)
+    # ports:
+    #   - "3306:3306"
+
+volumes:
+  mysql_data:
+
+
+

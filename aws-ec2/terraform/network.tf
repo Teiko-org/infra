@@ -68,7 +68,8 @@ resource "aws_subnet" "private" {
 resource "aws_eip" "nat" {
   count = 2
 
-  vpc = true
+  # vpc argument is deprecated; use domain = "vpc" instead.
+  domain = "vpc"
 
   tags = {
     Name        = "${var.project_name}-nat-eip-${count.index}"
