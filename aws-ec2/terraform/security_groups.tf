@@ -47,15 +47,6 @@ resource "aws_security_group" "private" {
     security_groups = [aws_security_group.public.id]
   }
 
-  # MySQL e RabbitMQ apenas dentro da VPC.
-  ingress {
-    description = "MySQL interno"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block]
-  }
-
   ingress {
     description = "RabbitMQ AMQP interno"
     from_port   = 5672
@@ -90,6 +81,43 @@ resource "aws_security_group" "private" {
 
   tags = {
     Name        = "${var.project_name}-private-sg"
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_security_group" "db" {
+  name        = "${var.project_name}-db-sg"
+  description = "SG da instância de banco (MySQL/MariaDB)"
+  vpc_id      = aws_vpc.main.id
+
+  # MySQL acessível apenas a partir dos backends.
+  ingress {
+    description     = "MySQL a partir dos backends"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.private.id]
+  }
+
+  # SSH administrativo (pode ser endurecido depois com bastion/VPN).
+  ingress {
+    description = "SSH administrativo"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.public_ssh_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-db-sg"
     Project     = var.project_name
     Environment = var.environment
   }

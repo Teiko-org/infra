@@ -1,37 +1,6 @@
 name: teiko-backend
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: teiko-mysql
-    restart: unless-stopped
-    # Tornar o MySQL mais leve para instâncias menores
-    command:
-      - "--innodb-buffer-pool-size=256M"
-      - "--max_connections=150"
-      - "--performance_schema=OFF"
-      - "--innodb-log-file-size=128M"
-      - "--character-set-server=utf8mb4"
-      - "--collation-server=utf8mb4_unicode_ci"
-      
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-teiko}
-      MYSQL_USER: ${DB_USERNAME:-teiko}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-teiko123}
-      LANG: C.UTF-8
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
-    # Não expor portas em ambientes privados (comentar/remover se necessário)
-    # ports:
-    #   - "3306:3306"
-
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: teiko-rabbitmq
@@ -52,17 +21,11 @@ services:
     #   - "15672:15672" # Console
 
   api:
-    build:
-      context: ../..
-      dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-backend
-    image: teiko/backend:latest
+    image: ${BACKEND_IMAGE:-teiko/backend:latest}
     container_name: teiko-backend
     restart: "on-failure:3"
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
-        condition: service_healthy
     environment:
       # Database
       DB_USERNAME: ${DB_USERNAME:-teiko}
@@ -96,14 +59,11 @@ services:
       - ../../backend/dev.env:/app/prod.env:ro
 
   worker:
-    image: teiko/backend:latest
+    image: ${BACKEND_IMAGE:-teiko/backend:latest}
     container_name: teiko-worker
     restart: "on-failure:3"
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
-        condition: service_healthy
     environment:
       # Perfis Spring
       SPRING_PROFILES_ACTIVE: worker
@@ -136,5 +96,4 @@ services:
       - ../../backend/dev.env:/app/prod.env:ro
 
 volumes:
-  mysql_data:
   rabbitmq_data:

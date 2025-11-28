@@ -46,6 +46,18 @@ variable "root_volume_size_private" {
   default     = 50
 }
 
+variable "instance_type_db" {
+  description = "Tipo da instância dedicada ao banco de dados (MySQL/MariaDB)."
+  type        = string
+  default     = "t3.small"
+}
+
+variable "root_volume_size_db" {
+  description = "Tamanho (GB) do disco root da instância de banco de dados."
+  type        = number
+  default     = 50
+}
+
 variable "key_name" {
   description = "Nome do key pair já criado na conta AWS (ex: key-carambolos)."
   type        = string
@@ -56,6 +68,25 @@ variable "public_ssh_cidr" {
   description = "CIDR liberado para SSH nas instâncias públicas."
   type        = string
   default     = "0.0.0.0/0"
+}
+
+variable "db_name" {
+  description = "Nome do banco de dados padrão da aplicação."
+  type        = string
+  default     = "teiko"
+}
+
+variable "db_username" {
+  description = "Usuário do banco de dados padrão da aplicação."
+  type        = string
+  default     = "teiko"
+}
+
+variable "db_password" {
+  description = "Senha do banco de dados padrão da aplicação."
+  type        = string
+  default     = "teiko123"
+  sensitive   = true
 }
 
 variable "shared_jwt" {
