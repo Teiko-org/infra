@@ -56,12 +56,18 @@ fi
 # Definir segredo JWT (aceita override via SHARED_JWT/JWT_SECRET)
 JWT_SECRET_HEX=${SHARED_JWT:-${JWT_SECRET:-$(openssl rand -hex 48)}}
 
+# Parâmetros de banco de dados (permitem apontar para uma instância dedicada)
+DB_HOST_DEFAULT="${DB_HOST:-mysql}"
+DB_NAME_DEFAULT="${DB_NAME:-teiko}"
+DB_USERNAME_DEFAULT="${DB_USERNAME:-teiko}"
+DB_PASSWORD_DEFAULT="${DB_PASSWORD:-teiko123}"
+
 # Garante o arquivo de env consumido pela API/worker (Dotenv lê dev.env)
 DEVENV="/opt/teiko/backend/dev.env"
 cat > "$DEVENV" <<ENVDEV
-DB_USERNAME=teiko
-DB_PASSWORD=teiko123
-DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
+DB_USERNAME=${DB_USERNAME_DEFAULT}
+DB_PASSWORD=${DB_PASSWORD_DEFAULT}
+DB_URL=jdbc:mysql://${DB_HOST_DEFAULT}:3306/${DB_NAME_DEFAULT}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
 
 JWT_VALIDITY=3600000
 JWT_SECRET=$JWT_SECRET_HEX
@@ -74,12 +80,13 @@ CRYPTO_SECRET_B64=$(openssl rand -base64 32)
 ENVDEV
 
 # .env do backend para docker compose (valores coerentes)
+BACKEND_IMAGE_DEFAULT="${BACKEND_IMAGE:-teiko/backend:latest}"
 cat > infra/aws-ec2/.env.backend <<ENVB
 MYSQL_ROOT_PASSWORD=root123
-MYSQL_DATABASE=teiko
-DB_USERNAME=teiko
-DB_PASSWORD=teiko123
-DB_URL=jdbc:mysql://mysql:3306/teiko?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
+MYSQL_DATABASE=${DB_NAME_DEFAULT}
+DB_USERNAME=${DB_USERNAME_DEFAULT}
+DB_PASSWORD=${DB_PASSWORD_DEFAULT}
+DB_URL=jdbc:mysql://${DB_HOST_DEFAULT}:3306/${DB_NAME_DEFAULT}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo
 
 JWT_VALIDITY=3600000
 JWT_SECRET=$JWT_SECRET_HEX
@@ -92,24 +99,28 @@ RABBITMQ_PREFETCH=10
 
 AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
 AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-}
+
+# Imagem do backend (CI deve fazer push para este nome/tag)
+BACKEND_IMAGE=${BACKEND_IMAGE_DEFAULT}
 ENVB
 
 # Ajustes no docker-compose: remover sobrescritas de JWT e garantir mapeamento para /app/prod.env
 sed -i '/JWT_SECRET:/d;/JWT_VALIDITY:/d' infra/aws-ec2/docker-compose.backend.yml
 sed -i 's#/app/dev.env#/app/prod.env#g' infra/aws-ec2/docker-compose.backend.yml
 
-echo "[private] Build e subida do backend (subindo em etapas)..."
-docker compose -f infra/aws-ec2/docker-compose.backend.yml build
+echo "[private] Subindo backend (imagens vindas do registry, sem build local)..."
 
-# Sobe apenas MySQL e RabbitMQ primeiro
-docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d mysql rabbitmq
+# Garante que a imagem do backend esteja atualizada (se existir em registry público/privado)
+docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend pull api worker || true
 
-# Aguarda healthchecks
-echo "[private] Aguardando MySQL e RabbitMQ ficarem healthy..."
+# Sobe apenas RabbitMQ primeiro (banco passa a ser remoto)
+docker compose -f infra/aws-ec2/docker-compose.backend.yml --env-file infra/aws-ec2/.env.backend up -d rabbitmq
+
+# Aguarda healthcheck do RabbitMQ
+echo "[private] Aguardando RabbitMQ ficar healthy..."
 for i in {1..60}; do
-  MYSQL_H=$(docker inspect -f '{{.State.Health.Status}}' teiko-mysql 2>/dev/null || echo starting)
   RABBIT_H=$(docker inspect -f '{{.State.Health.Status}}' teiko-rabbitmq 2>/dev/null || echo starting)
-  if [[ "$MYSQL_H" == "healthy" && "$RABBIT_H" == "healthy" ]]; then
+  if [[ "$RABBIT_H" == "healthy" ]]; then
     break
   fi
   sleep 2

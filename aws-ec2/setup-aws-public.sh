@@ -80,13 +80,22 @@ if ! grep -q 'events.defaultMaxListeners' infra/aws-ec2/dockerfiles/server.js 2>
   sed -i '1i const events = require("events"); events.defaultMaxListeners = 50;' infra/aws-ec2/dockerfiles/server.js || true
 fi
 
-# .env do frontend (somente API_UPSTREAMS)
+# .env do frontend (API_UPSTREAMS e imagem)
+FRONTEND_IMAGE_DEFAULT="${FRONTEND_IMAGE:-teiko/frontend:latest}"
 if [[ ! -f infra/aws-ec2/.env.frontend ]]; then
-  cat > infra/aws-ec2/.env.frontend <<'ENVF'
+  cat > infra/aws-ec2/.env.frontend <<ENVF
 # Informe os backends (um ou mais):
 # Ex.: API_UPSTREAMS=10.0.2.203:8080,10.0.3.46:8080
 API_UPSTREAMS=
+
+# Imagem do frontend (CI deve fazer push para este nome/tag)
+FRONTEND_IMAGE=${FRONTEND_IMAGE_DEFAULT}
 ENVF
+else
+  # Garante que FRONEND_IMAGE esteja definido no arquivo existente
+  if ! grep -q '^FRONTEND_IMAGE=' infra/aws-ec2/.env.frontend; then
+    echo "FRONTEND_IMAGE=${FRONTEND_IMAGE_DEFAULT}" >> infra/aws-ec2/.env.frontend
+  fi
 fi
 
 # Permite passar API_UPSTREAMS via variável de ambiente na execução:
@@ -102,8 +111,8 @@ if ! grep -q '^API_UPSTREAMS=' infra/aws-ec2/.env.frontend || grep -q '^API_UPST
   exit 1
 fi
 
-echo "[public] Build e subida do frontend..."
-docker compose -f infra/aws-ec2/docker-compose.frontend.yml build
+echo "[public] Subindo frontend (imagem vinda do registry, sem build local)..."
+docker compose -f infra/aws-ec2/docker-compose.frontend.yml --env-file infra/aws-ec2/.env.frontend pull web || true
 docker compose -f infra/aws-ec2/docker-compose.frontend.yml --env-file infra/aws-ec2/.env.frontend up -d
 
 echo "[public] Concluído. Reinicie a sessão para aplicar grupo docker se necessário."

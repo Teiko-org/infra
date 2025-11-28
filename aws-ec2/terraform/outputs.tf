@@ -28,4 +28,9 @@ output "private_instance_private_ips" {
   value       = aws_instance.private[*].private_ip
 }
 
+output "db_instance_private_ip" {
+  description = "IP privado da instância dedicada ao banco de dados (MySQL/MariaDB)."
+  value       = aws_instance.db.private_ip
+}
+
 

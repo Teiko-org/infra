@@ -2,10 +2,7 @@ name: teiko-frontend
 
 services:
   web:
-    build:
-      context: ../..
-      dockerfile: infra/aws-ec2/dockerfiles/Dockerfile-frontend
-    image: teiko/frontend:latest
+    image: ${FRONTEND_IMAGE:-teiko/frontend:latest}
     container_name: teiko-frontend
     restart: unless-stopped
     environment:

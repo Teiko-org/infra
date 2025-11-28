@@ -1,23 +1,2 @@
-# Multi-stage build para backend Spring Boot
-FROM maven:3.9.6-amazoncorretto-21 AS build
-WORKDIR /workspace
-
-# Copia o projeto do backend
-COPY ./backend/carambolos-api /workspace/app
-WORKDIR /workspace/app
-
-RUN mvn -B -DskipTests -Dmaven.test.skip=true clean package
-
-FROM amazoncorretto:21-alpine
-WORKDIR /app
-
-# Jar gerado
-COPY --from=build /workspace/app/target/*.jar /app/app.jar
-
-ENV SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Xms512m -Xmx1024m"
-
-EXPOSE 8080
-CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
-
-
+FROM scratch
+# Dockerfile real foi movido para o repositório de backend em backend/docker/Dockerfile
