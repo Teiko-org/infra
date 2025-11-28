@@ -1,6 +1,6 @@
 resource "aws_security_group" "public" {
   name        = "${var.project_name}-public-sg"
-  description = "SG das instâncias públicas (frontend/proxy)"
+  description = "Security group for public instances (frontend/proxy)"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -35,7 +35,7 @@ resource "aws_security_group" "public" {
 
 resource "aws_security_group" "private" {
   name        = "${var.project_name}-private-sg"
-  description = "SG das instâncias privadas (backend)"
+  description = "Security group for private instances (backend)"
   vpc_id      = aws_vpc.main.id
 
   # Backend acessível apenas a partir das públicas (porta 8080).
@@ -88,7 +88,7 @@ resource "aws_security_group" "private" {
 
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg"
-  description = "SG da instância de banco (MySQL/MariaDB)"
+  description = "Security group for DB instance (MySQL/MariaDB)"
   vpc_id      = aws_vpc.main.id
 
   # MySQL acessível apenas a partir dos backends.
