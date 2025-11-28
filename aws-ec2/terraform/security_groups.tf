@@ -38,9 +38,8 @@ resource "aws_security_group" "private" {
   description = "Security group for private instances (backend)"
   vpc_id      = aws_vpc.main.id
 
-  # Backend acessível apenas a partir das públicas (porta 8080).
   ingress {
-    description     = "Backend HTTP da API a partir das públicas"
+    description     = "Backend HTTP from public instances"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
@@ -70,6 +69,14 @@ resource "aws_security_group" "private" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.public_ssh_cidr]
+  }
+
+  ingress {
+    description     = "SSH from public/bastion instances"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.public.id]
   }
 
   egress {
