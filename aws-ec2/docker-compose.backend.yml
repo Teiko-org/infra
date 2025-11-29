@@ -25,7 +25,7 @@ services:
     container_name: teiko-backend
     restart: "on-failure:3"
     depends_on:
-      rabbitmq:
+      - rabbitmq
     environment:
       # Database
       DB_USERNAME: ${DB_USERNAME:-teiko}
@@ -63,7 +63,7 @@ services:
     container_name: teiko-worker
     restart: "on-failure:3"
     depends_on:
-      rabbitmq:
+      - rabbitmq
     environment:
       # Perfis Spring
       SPRING_PROFILES_ACTIVE: worker
