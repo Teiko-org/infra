@@ -5,12 +5,25 @@ echo "[private] Atualizando pacotes e instalando Docker..."
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo apt-get install -y ca-certificates curl gnupg lsb-release git
+
+# Configuração idempotente do repositório Docker (evita interações com /dev/tty).
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
+  echo "[private] Instalando chave GPG do Docker (primeira vez)..."
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+else
+  echo "[private] Chave GPG do Docker já existe, mantendo arquivo atual."
+fi
+
+if [[ ! -f /etc/apt/sources.list.d/docker.list ]]; then
+  echo "[private] Registrando repositório Docker no APT..."
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+fi
+
 sudo apt-get update -y
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker "$USER" || true
