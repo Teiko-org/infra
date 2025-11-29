@@ -28,9 +28,10 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ../../backend/carambolos-api/src/main/resources/script-bd.sql:/docker-entrypoint-initdb.d/01-script-bd.sql:ro
-    # Em produção, o MySQL fica acessível apenas via VPC/SG (não expor porta pública aqui)
-    # ports:
-    #   - "3306:3306"
+    # Expor a porta 3306 apenas dentro da VPC.
+    # O controle de quem pode acessar é feito via Security Group da instância EC2.
+    ports:
+      - "3306:3306"
 
 volumes:
   mysql_data:
