@@ -1,6 +1,14 @@
 name: teiko-backend
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: teiko-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: teiko-rabbitmq
@@ -26,6 +34,7 @@ services:
     restart: "on-failure:3"
     depends_on:
       - rabbitmq
+      - redis
     environment:
       # Database
       DB_USERNAME: ${DB_USERNAME:-teiko}
@@ -43,6 +52,9 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
+      # Redis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       # Java options (opcional) - mais conservador para VMs pequenas
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     ports:
@@ -64,6 +76,7 @@ services:
     restart: "on-failure:3"
     depends_on:
       - rabbitmq
+      - redis
     environment:
       # Perfis Spring
       SPRING_PROFILES_ACTIVE: worker
@@ -82,6 +95,9 @@ services:
       RABBITMQ_CONCURRENCY: ${RABBITMQ_CONCURRENCY:-2}
       RABBITMQ_MAX_CONCURRENCY: ${RABBITMQ_MAX_CONCURRENCY:-4}
       RABBITMQ_PREFETCH: ${RABBITMQ_PREFETCH:-10}
+      # Redis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       # Java options (opcional) - mais conservador para VMs pequenas
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     env_file:
@@ -97,3 +113,4 @@ services:
 
 volumes:
   rabbitmq_data:
+  redis_data:
