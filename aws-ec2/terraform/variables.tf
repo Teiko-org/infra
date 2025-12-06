@@ -58,6 +58,12 @@ variable "root_volume_size_db" {
   default     = 50
 }
 
+variable "db_instance_class" {
+  description = "Classe da instância RDS MySQL (ex: db.t3.micro)."
+  type        = string
+  default     = "db.t3.micro"
+}
+
 variable "key_name" {
   description = "Nome do key pair já criado na conta AWS (ex: key-xxx)."
   type        = string
@@ -95,17 +101,10 @@ variable "shared_jwt" {
   sensitive   = true
 }
 
-variable "azure_storage_connection_string" {
-  description = "Connection string do Azure Storage usada pelo backend."
+variable "aws_s3_bucket_name" {
+  description = "Nome do bucket S3 usado pelo backend para armazenar arquivos."
   type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "azure_storage_container_name" {
-  description = "Nome do container do Azure Storage usado pelo backend."
-  type        = string
-  default     = "teiko-s3"
+  default     = "teiko-bucket"
 }
 
 

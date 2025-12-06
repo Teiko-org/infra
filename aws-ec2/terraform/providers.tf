@@ -8,11 +8,12 @@ terraform {
     }
   }
 
-  # Backend local por padrão.
-  # Se quiser migrar para S3 + DynamoDB depois, ajuste este bloco e faça um
-  # `terraform init -migrate-state`.
-  backend "local" {
-    path = "terraform.tfstate"
+  # Backend remoto em S3 para guardar o state do Terraform.
+  # IMPORTANTE: o bucket precisa existir antes de rodar `terraform init`.
+  backend "s3" {
+    bucket = "teiko-bucket"
+    key    = "aws-ec2/terraform.tfstate"
+    region = "us-east-1"
   }
 }
 

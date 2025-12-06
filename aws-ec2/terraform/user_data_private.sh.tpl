@@ -22,8 +22,8 @@ cd /opt/teiko
 
 # Executa o script padrão da infra, passando os segredos via env.
 SHARED_JWT="${shared_jwt}" \
-AZURE_STORAGE_CONNECTION_STRING="${azure_storage_connection_string}" \
-AZURE_STORAGE_CONTAINER_NAME="${azure_storage_container_name}" \
+AWS_S3_BUCKET_NAME="${aws_s3_bucket_name}" \
+AWS_REGION="${aws_region}" \
 DB_HOST="${db_host}" \
 DB_NAME="${db_name}" \
 DB_USERNAME="${db_username}" \
