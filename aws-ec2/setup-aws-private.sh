@@ -88,6 +88,11 @@ JWT_SECRET=$JWT_SECRET_HEX
 AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-teiko-bucket}
 AWS_REGION=${AWS_REGION:-us-east-1}
 
+# Credenciais AWS (se forem exportadas no ambiente do deploy, por exemplo via GitHub Actions)
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
+
 # extra (não usado diretamente agora, mas útil)
 CRYPTO_SECRET_B64=$(openssl rand -base64 32)
 ENVDEV
@@ -112,6 +117,11 @@ RABBITMQ_PREFETCH=10
 
 AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-teiko-bucket}
 AWS_REGION=${AWS_REGION:-us-east-1}
+
+# Credenciais AWS para dentro do container (DefaultCredentialsProvider lê essas variáveis)
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
 
 # Imagem do backend (CI deve fazer push para este nome/tag)
 BACKEND_IMAGE=${BACKEND_IMAGE_DEFAULT}
