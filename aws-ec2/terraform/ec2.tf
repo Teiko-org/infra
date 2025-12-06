@@ -21,28 +21,42 @@ locals {
   }
 }
 
-resource "aws_instance" "db" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type_db
-  subnet_id              = aws_subnet.private[0].id
-  vpc_security_group_ids = [aws_security_group.db.id]
-  key_name               = var.key_name
-
-  associate_public_ip_address = false
-
-  root_block_device {
-    volume_size = var.root_volume_size_db
-    volume_type = "gp3"
-  }
-
-  user_data = templatefile("${path.module}/user_data_db.sh.tpl", {
-    db_name     = var.db_name
-    db_username = var.db_username
-    db_password = var.db_password
-  })
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.project_name}-db-subnet-group"
+  subnet_ids = aws_subnet.private[*].id
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-ec2-db"
+    Name = "${var.project_name}-db-subnet-group"
+    Role = "db"
+  })
+}
+
+resource "aws_db_instance" "db" {
+  identifier = "${var.project_name}-db"
+
+  engine               = "mysql"
+  engine_version       = "8.0"
+  instance_class       = var.db_instance_class
+  allocated_storage    = 20
+  max_allocated_storage = 100
+  storage_type         = "gp3"
+
+  db_name  = var.db_name
+  username = var.db_username
+  password = var.db_password
+
+  multi_az               = false
+  publicly_accessible    = false
+  deletion_protection    = false
+  skip_final_snapshot    = true
+  apply_immediately      = true
+  backup_retention_period = 1
+
+  vpc_security_group_ids = [aws_security_group.db.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-rds-mysql"
     Role = "db"
   })
 }
@@ -64,13 +78,13 @@ resource "aws_instance" "private" {
   }
 
   user_data = templatefile("${path.module}/user_data_private.sh.tpl", {
-    shared_jwt                      = var.shared_jwt
-    azure_storage_connection_string = var.azure_storage_connection_string
-    azure_storage_container_name    = var.azure_storage_container_name
-    db_host                         = aws_instance.db.private_ip
-    db_name                         = var.db_name
-    db_username                     = var.db_username
-    db_password                     = var.db_password
+    shared_jwt          = var.shared_jwt
+    aws_s3_bucket_name  = var.aws_s3_bucket_name
+    aws_region          = var.aws_region
+    db_host             = aws_db_instance.db.address
+    db_name             = var.db_name
+    db_username         = var.db_username
+    db_password         = var.db_password
   })
 
   tags = merge(local.common_tags, {

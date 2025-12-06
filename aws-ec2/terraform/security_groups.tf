@@ -95,7 +95,7 @@ resource "aws_security_group" "private" {
 
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg"
-  description = "Security group for DB instance (MySQL/MariaDB)"
+  description = "Security group for RDS MySQL"
   vpc_id      = aws_vpc.main.id
 
   # MySQL acessível apenas a partir dos backends.
@@ -105,15 +105,6 @@ resource "aws_security_group" "db" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.private.id]
-  }
-
-  # SSH administrativo (pode ser endurecido depois com bastion/VPN).
-  ingress {
-    description = "SSH administrativo"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.public_ssh_cidr]
   }
 
   egress {
@@ -129,5 +120,4 @@ resource "aws_security_group" "db" {
     Environment = var.environment
   }
 }
-
 
