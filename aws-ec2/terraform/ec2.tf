@@ -126,4 +126,22 @@ resource "aws_instance" "public" {
   })
 }
 
+# Elastic IPs fixos para as instâncias públicas
+resource "aws_eip" "public" {
+  count  = 2
+  domain = "vpc"
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-eip-publica-${count.index == 0 ? "a" : "b"}"
+    Role = "frontend-proxy"
+  })
+}
+
+# Associa os Elastic IPs às instâncias públicas
+resource "aws_eip_association" "public" {
+  count         = 2
+  instance_id   = aws_instance.public[count.index].id
+  allocation_id = aws_eip.public[count.index].id
+}
+
 

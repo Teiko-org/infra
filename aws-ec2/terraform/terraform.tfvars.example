@@ -1,0 +1,31 @@
+# Exemplo de terraform.tfvars para nova conta AWS
+# Copie este arquivo para terraform.tfvars e ajuste os valores
+
+aws_region  = "us-east-1"
+azs         = ["us-east-1a", "us-east-1b"]
+
+# Nome do key pair criado na nova conta
+key_name    = "key-teiko"
+
+# Segredo JWT (gere um novo - NÃO COMMITAR)
+shared_jwt  = "COLOQUE_UM_SEGREDO_FORTE_AQUI_PELO_MENOS_32_CARACTERES"
+
+# Nome do bucket S3 (deve corresponder ao criado no passo 2)
+aws_s3_bucket_name = "teiko-bucket-pj"
+
+# Opcional: limite SSH ao seu IP
+# public_ssh_cidr = "SEU_IP/32"
+
+# Nome do projeto e ambiente
+project_name = "teiko"
+environment  = "lab"
+
+# Configurações de instâncias (ajuste conforme necessário)
+instance_type_public  = "t3.small"
+instance_type_private = "t3.medium"
+instance_type_db      = "t3.small"
+
+# Banco de dados
+db_name     = "teiko"
+db_username = "teiko"
+db_password = "teiko123"  # ALTERE para uma senha segura
