@@ -14,8 +14,8 @@ output "private_subnets" {
 }
 
 output "public_instance_public_ips" {
-  description = "IPs públicos das instâncias públicas (frontend/proxy)."
-  value       = aws_instance.public[*].public_ip
+  description = "Elastic IPs fixos das instâncias públicas (frontend/proxy)."
+  value       = aws_eip.public[*].public_ip
 }
 
 output "public_instance_private_ips" {
@@ -31,4 +31,16 @@ output "private_instance_private_ips" {
 output "db_endpoint" {
   description = "Endpoint do banco de dados RDS (MySQL)."
   value       = aws_db_instance.db.address
+}
+
+output "elastic_ips" {
+  description = "Elastic IPs alocados para as instâncias públicas."
+  value = {
+    for idx, eip in aws_eip.public : 
+    "publica-${idx == 0 ? "a" : "b"}" => {
+      ip            = eip.public_ip
+      allocation_id = eip.id
+      instance_id   = aws_instance.public[idx].id
+    }
+  }
 }

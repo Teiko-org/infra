@@ -11,7 +11,7 @@ terraform {
   # Backend remoto em S3 para guardar o state do Terraform.
   # IMPORTANTE: o bucket precisa existir antes de rodar `terraform init`.
   backend "s3" {
-    bucket = "teiko-bucket"
+    bucket = "teiko-bucket-pj"
     key    = "aws-ec2/terraform.tfstate"
     region = "us-east-1"
   }
