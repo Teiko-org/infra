@@ -61,7 +61,9 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       # Server ID para demonstração do balanceador de carga
-      SERVER_ID: ${SERVER_ID:-server-unknown}
+      SERVER_ID: ${SERVER_ID:-}
+      # HOSTNAME para fallback (usa o hostname da EC2 instance)
+      HOSTNAME: ${HOSTNAME:-teiko-backend}
       # Java options (opcional) - mais conservador para VMs pequenas
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m}
     ports:
