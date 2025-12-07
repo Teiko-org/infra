@@ -43,7 +43,12 @@ services:
       # JWT
       JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
-      # Azure Storage (valores virão via env_file)
+      # AWS S3
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-teiko-bucket}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
       # RabbitMQ
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
@@ -87,6 +92,12 @@ services:
       # JWT (pode não ser necessário no worker, mas mantemos consistente)
       JWT_VALIDITY: ${JWT_VALIDITY:-3600000}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_32_CHARS_MIN}
+      # AWS S3
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-teiko-bucket}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
       # RabbitMQ
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
