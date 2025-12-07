@@ -27,8 +27,7 @@ shared_jwt  = "COLOQUE_UM_SEGREDO_FORTE_AQUI"
 
 # Opcional/Exemplo:
 # public_ssh_cidr = "SEU_IP/32"
-# azure_storage_connection_string = "..."
-# azure_storage_container_name    = "teiko-s3"
+# aws_s3_bucket_name       = "teiko-bucket"
 ```
 
 4. No mesmo diretório, rode:
