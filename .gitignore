@@ -1,5 +1,20 @@
+# Terraform
 .terraform/
 terraform.tfstate
 terraform.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
 
+# SSH Keys
+*.pem
 
+# Backups
+*.backup
+
+# Logs
+*.log
+
+# Environment files
+*.env
+!*.env.example
